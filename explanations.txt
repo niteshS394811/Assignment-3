@@ -1,0 +1,32 @@
+=== OOP CONCEPTS EXPLANATION ===
+
+1. MULTIPLE INHERITANCE:
+   - Used in gui/app.py: class AIAppGUI(LoggingMixin, tk.Tk)
+   - LoggingMixin adds reusable logging without duplicating code in every method.
+
+2. DECORATORS:
+   - @log_action decorator logs user actions (e.g., run_model_1) without modifying core logic.
+   - Applied to multiple methods to track user interaction.
+
+3. ENCAPSULATION:
+   - Each AI model (TextToImageModel, SentimentModel) encapsulates its own loading and inference logic.
+   - Internal state (pipeline, model object) is hidden — accessed only via public methods.
+
+4. POLYMORPHISM:
+   - Different models respond to different method calls (.generate() vs .analyze()) but are accessed through the same interface via ModelSelector.
+   - The GUI doesn’t need to know which model it’s calling — just tells it to “run”.
+
+5. METHOD OVERRIDING:
+   - Not heavily used, but you could override Tkinter’s .destroy() method to add cleanup (e.g., delete temp images).
+
+=== SELECTED AI MODELS ===
+
+1. Text-to-Image Model:
+   - Name: nota-ai/bk-sdm-small
+   - Category: Image Generation
+   - Why chosen: Lightweight (~500MB), fast on CPU, no login required, generates decent quality images from text.
+
+2. Sentiment Analysis Model:
+   - Name: cardiffnlp/twitter-roberta-base-sentiment-latest
+   - Category: Text Classification
+   - Why chosen: Lightweight, state-of-the-art for Twitter-style text, requires only transformers library.
