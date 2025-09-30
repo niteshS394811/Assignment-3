@@ -1,5 +1,7 @@
-from gui.app import AIAppGUI
+import tkinter as tk
+from gui.app import AIModelGUI
 
 if __name__ == "__main__":
-    app = AIAppGUI()
-    app.mainloop()
+    root = tk.Tk()
+    app = AIModelGUI(root)
+    root.mainloop()

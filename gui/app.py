@@ -1,239 +1,229 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, filedialog, messagebox, scrolledtext
+from PIL import Image, ImageTk
+import os
+
+# Import your model selector
 from gui.model_selector import ModelSelector
-from gui.output_display import OutputDisplay
-from models.text_to_image_model import TextToImageModel
-from models.sentiment_model import SentimentModel
-
-# =======================
-# DECORATOR: Logs user actions
-# =======================
-def log_action(func):
-    """Decorator to log user-triggered actions"""
-    def wrapper(self, *args, **kwargs):
-        print(f"[LOG] {func.__name__} called")
-        return func(self, *args, **kwargs)
-    return wrapper
 
 
-# =======================
-# MIXIN CLASS: For logging (demonstrates Multiple Inheritance)
-# =======================
-class LoggingMixin:
-    def log(self, message):
-        """Log a message to console"""
-        print(f"[MIXIN] {message}")
-
-
-# =======================
-# MAIN GUI CLASS: Inherits from LoggingMixin + tk.Tk → MULTIPLE INHERITANCE
-# =======================
-class AIAppGUI(LoggingMixin, tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.log("Initializing GUI...")
-        self.title("Tkinter AI GUI")
-        self.geometry("800x700")
-
-        # Create menu bar
-        self.create_menu()
-
-        # Initialize model selector
-        self.model_selector = ModelSelector()
-        self.current_model = None
-
-        # Create widgets
-        self.create_widgets()
-
-        self.log("GUI initialized successfully.")
-
-    def create_menu(self):
-        """Create menu bar with File, Models, Help"""
-        menubar = tk.Menu(self)
-        self.config(menu=menubar)
-
-        # File menu
+class AIModelGUI:
+    def __init__(self, root):
+        self._root = root
+        self._setup_window()
+        self._model_selector = ModelSelector()
+        self._current_model = None
+        self._uploaded_file = None
+        self._create_widgets()
+        
+    def _setup_window(self):
+        self._root.title("HIT137 Assignment 3 - AI Model GUI")
+        self._root.geometry("900x700")
+        self._root.resizable(True, True)
+        style = ttk.Style()
+        style.theme_use('clam')
+        
+    def _create_widgets(self):
+        self._create_menu()
+        self._create_model_selection()
+        self._create_input_section()
+        self._create_output_section()
+        self._create_info_section()
+        
+    def _create_menu(self):
+        menubar = tk.Menu(self._root)
+        self._root.config(menu=menubar)
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="New", command=self.new_project)
-        file_menu.add_command(label="Open", command=self.open_file)
-        file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.quit)
         menubar.add_cascade(label="File", menu=file_menu)
-
-        # Models menu
-        models_menu = tk.Menu(menubar, tearoff=0)
-        models_menu.add_command(label="Text-to-Image", command=lambda: self.select_model("Text-to-Image"))
-        models_menu.add_command(label="Sentiment Analysis", command=lambda: self.select_model("Sentiment Analysis"))
-        menubar.add_cascade(label="Models", menu=models_menu)
-
-        # Help menu
-        help_menu = tk.Menu(menubar, tearoff=0)
-        help_menu.add_command(label="About", command=self.show_about)
-        menubar.add_cascade(label="Help", menu=help_menu)
-
-    def new_project(self):
-        messagebox.showinfo("New Project", "Starting a new project...")
-
-    def open_file(self):
-        file_path = filedialog.askopenfilename()
-        if file_path:
-            messagebox.showinfo("File Open", f"Opened: {file_path}")
-
-    def show_about(self):
-        about_text = """
-        HIT137 Assignment 3 - AI Model GUI
-        Created by: Group X
-        Uses Hugging Face models via transformers/diffusers
-        """
-        messagebox.showinfo("About", about_text)
-
-    def select_model(self, model_name):
-        self.current_model = self.model_selector.get_model(model_name)
-        if self.current_model:
-            self.model_dropdown.set(model_name)
-            self.log(f"Model selected: {model_name}")
-        else:
-            messagebox.showerror("Error", f"Model '{model_name}' not found.")
-
-    def create_widgets(self):
-        # === TOP FRAME: Model Selection ===
-        top_frame = tk.Frame(self)
-        top_frame.pack(fill="x", padx=10, pady=5)
-
-        tk.Label(top_frame, text="Model Selection:").pack(side="left")
-
-        self.model_var = tk.StringVar(value="Text-to-Image")
-        self.model_dropdown = ttk.Combobox(
-            top_frame,
-            textvariable=self.model_var,
-            values=["Text-to-Image", "Sentiment Analysis"],
+        file_menu.add_command(label="Exit", command=self._root.quit)
+        
+    def _create_model_selection(self):
+        model_frame = ttk.LabelFrame(self._root, text="Model Selection", padding="10")
+        model_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Label(model_frame, text="Select Model:").pack(side=tk.LEFT, padx=5)
+        self._model_var = tk.StringVar()
+        self._models_list = ["Text-to-Image", "Sentiment Analysis"]
+        self._model_combo = ttk.Combobox(
+            model_frame,
+            textvariable=self._model_var,
+            values=self._models_list,
             state="readonly",
-            width=20
+            width=30
         )
-        self.model_dropdown.pack(side="left", padx=5)
-
-        load_button = tk.Button(
-            top_frame,
-            text="Load Model",
-            command=self.load_model,
-            bg="#4CAF50",
-            fg="white"
-        )
-        load_button.pack(side="right")
-
-        # === USER INPUT SECTION ===
-        input_frame = tk.Frame(self, relief="solid", bd=1)
-        input_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
-        # Radio Buttons
-        input_type_frame = tk.Frame(input_frame)
-        input_type_frame.pack(pady=5)
-
-        self.input_type = tk.StringVar(value="Text")
-        tk.Radiobutton(input_type_frame, text="Text", variable=self.input_type, value="Text").pack(side="left")
-        tk.Radiobutton(input_type_frame, text="Image", variable=self.input_type, value="Image").pack(side="left")
-
-        browse_button = tk.Button(input_type_frame, text="Browse", command=self.browse_file)
-        browse_button.pack(side="right")
-
-        # Text input box
-        self.text_input = tk.Text(input_frame, height=6, width=50, wrap="word")
-        self.text_input.pack(padx=10, pady=5)
-
-        # Run buttons
-        run_frame = tk.Frame(input_frame)
-        run_frame.pack(pady=5)
-
-        tk.Button(run_frame, text="Run Model 1", command=self.run_model_1).pack(side="left", padx=5)
-        tk.Button(run_frame, text="Run Model 2", command=self.run_model_2).pack(side="left", padx=5)
-
-        # === MODEL OUTPUT SECTION ===
-        output_frame = tk.Frame(self, relief="solid", bd=1)
-        output_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
-        tk.Label(output_frame, text="Output Display:").pack(pady=5)
-
-        self.output_display = OutputDisplay(output_frame)
-        self.output_display.frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # === MODEL INFO & EXPLANATION ===
-        info_frame = tk.Frame(self)
-        info_frame.pack(fill="x", padx=10, pady=5)
-
-        tk.Label(info_frame, text="Model Information & Explanation", font=("Arial", 12, "bold")).pack()
-
-        # Left Column: Model Info
-        left_col = tk.Frame(info_frame)
-        left_col.pack(side="left", padx=10, pady=5)
-
-        tk.Label(left_col, text="Selected Model Info:", font=("Arial", 10, "bold")).pack(anchor="w")
-        tk.Label(left_col, text="• Model Name").pack(anchor="w", pady=2)
-        tk.Label(left_col, text="• Category (Text, Vision, Audio)").pack(anchor="w", pady=2)
-        tk.Label(left_col, text="• Short Description").pack(anchor="w", pady=2)
-
-        # Right Column: OOP Concepts
-        right_col = tk.Frame(info_frame)
-        right_col.pack(side="right", padx=10, pady=5)
-
-        tk.Label(right_col, text="OOP Concepts Explanation:", font=("Arial", 10, "bold")).pack(anchor="w")
-        tk.Label(right_col, text="• Where Multiple Inheritance was applied").pack(anchor="w", pady=2)
-        tk.Label(right_col, text="• Why Encapsulation was applied").pack(anchor="w", pady=2)
-        tk.Label(right_col, text="• How Polymorphism and Method Overriding are shown").pack(anchor="w", pady=2)
-        tk.Label(right_col, text="• Where Multiple Decorators are applied").pack(anchor="w", pady=2)
-
-        # === NOTES SECTION ===
-        notes_frame = tk.Frame(self)
-        notes_frame.pack(fill="x", padx=10, pady=5)
-
-        tk.Label(notes_frame, text="Notes: Extra notes, instructions, or references.").pack()
-
-    @log_action
-    def load_model(self):
-        if not self.current_model:
-            self.current_model = self.model_selector.get_model(self.model_var.get())
-        if self.current_model:
-            self.log(f"Model loaded: {self.model_var.get()}")
-            messagebox.showinfo("Success", f"Model '{self.model_var.get()}' loaded.")
-        else:
-            messagebox.showerror("Error", "Failed to load model.")
-
-    @log_action
-    def browse_file(self):
-        file_path = filedialog.askopenfilename(filetypes=[("Images", "*.png *.jpg *.jpeg")])
-        if file_path:
-            self.text_input.delete(1.0, tk.END)
-            self.text_input.insert(tk.END, f"Image loaded: {file_path}")
-
-    @log_action
-    def run_model_1(self):
-        if not self.current_model:
-            messagebox.showwarning("Warning", "Please load a model first.")
+        self._model_combo.set(self._models_list[0])
+        self._model_combo.pack(side=tk.LEFT, padx=5)
+        self._model_combo.bind('<<ComboboxSelected>>', self._on_model_selected)
+        
+        ttk.Button(model_frame, text="Load Model", command=self._load_model).pack(side=tk.LEFT, padx=10)
+        
+    def _create_input_section(self):
+        input_frame = ttk.LabelFrame(self._root, text="User Input", padding="10")
+        input_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        type_frame = ttk.Frame(input_frame)
+        type_frame.pack(fill=tk.X, pady=5)
+        self._input_type = tk.StringVar(value="text")
+        ttk.Radiobutton(type_frame, text="Text", variable=self._input_type, value="text").pack(side=tk.LEFT)
+        ttk.Radiobutton(type_frame, text="Image", variable=self._input_type, value="image").pack(side=tk.LEFT, padx=10)
+        ttk.Button(type_frame, text="Browse", command=self._browse_file).pack(side=tk.LEFT, padx=10)
+        
+        self._input_text = scrolledtext.ScrolledText(input_frame, height=6, wrap=tk.WORD)
+        self._input_text.pack(fill=tk.BOTH, expand=True, pady=5)
+        
+        btn_frame = ttk.Frame(input_frame)
+        btn_frame.pack(fill=tk.X, pady=5)
+        ttk.Button(btn_frame, text="Run", command=self._run_model).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="Clear", command=self._clear_all).pack(side=tk.LEFT, padx=5)
+        
+    def _create_output_section(self):
+        output_frame = ttk.LabelFrame(self._root, text="Output", padding="10")
+        output_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        self._output_container = ttk.Frame(output_frame)
+        self._output_container.pack(fill=tk.BOTH, expand=True)
+        
+        self._output_text = scrolledtext.ScrolledText(self._output_container, height=8, wrap=tk.WORD)
+        self._output_text.pack(fill=tk.BOTH, expand=True)
+        self._output_image_label = tk.Label(self._output_container)
+        
+    def _create_info_section(self):
+        info_frame = ttk.LabelFrame(self._root, text="Model Information & OOP Explanation", padding="10")
+        info_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        self._info_text = scrolledtext.ScrolledText(info_frame, wrap=tk.WORD, font=("Arial", 9))
+        self._info_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self._update_info_display()
+        
+    def _on_model_selected(self, event=None):
+        self._update_info_display()
+        
+    def _browse_file(self):
+        filetypes = [("Image files", "*.jpg *.jpeg *.png"), ("All files", "*.*")]
+        filepath = filedialog.askopenfilename(filetypes=filetypes)
+        if filepath:
+            self._uploaded_file = filepath
+            self._input_text.delete(1.0, tk.END)
+            self._input_text.insert(tk.END, f"Selected: {filepath}")
+            
+    def _load_model(self):
+        model_name = self._model_var.get()
+        if not model_name:
+            messagebox.showwarning("Warning", "Please select a model")
             return
-
-        input_data = self.text_input.get(1.0, tk.END).strip()
-        if not input_data:
-            messagebox.showwarning("Warning", "Please enter input data.")
-            return
-
+            
         try:
-            if isinstance(self.current_model, TextToImageModel):
-                output_path = self.current_model.generate(input_data)
-                self.output_display.display_image(output_path)
-            elif isinstance(self.current_model, SentimentModel):
-                result = self.current_model.analyze(input_data)
-                display_text = f"Sentiment: {result['label']} (Confidence: {result['score']:.4f})"
-                self.output_display.display_text(display_text)
+            self._current_model = self._model_selector.get_model(model_name)
+            if self._current_model is None:
+                messagebox.showerror("Error", "Model not found")
+                return
+                
+            self._output_text.insert(tk.END, f"Loading {model_name}...\n")
+            self._root.update()
+            
+            if self._current_model.load_model():
+                self._output_text.insert(tk.END, f"✅ {model_name} loaded successfully!\n\n")
+            else:
+                self._output_text.insert(tk.END, f"❌ Failed to load {model_name}\n\n")
+                self._current_model = None
         except Exception as e:
-            messagebox.showerror("Error", f"Model failed: {str(e)}")
+            messagebox.showerror("Error", f"Error loading model: {str(e)}")
+            self._current_model = None
+            
+    def _run_model(self):
+        if not self._current_model:
+            messagebox.showwarning("Warning", "Please load a model first")
+            return
+            
+        input_data = self._get_input_data()
+        if input_data is None:
+            return
+            
+        try:
+            self._output_text.insert(tk.END, "Running model...\n")
+            self._root.update()
+            result = self._current_model.predict(input_data)
+            self._display_result(result)
+        except Exception as e:
+            messagebox.showerror("Error", f"Error running model: {str(e)}")
+            
+    def _get_input_data(self):
+        if self._input_type.get() == "text":
+            text = self._input_text.get(1.0, tk.END).strip()
+            if not text:
+                messagebox.showwarning("Warning", "Please enter text")
+                return None
+            return text
+        else:
+            if not self._uploaded_file:
+                messagebox.showwarning("Warning", "Please select an image")
+                return None
+            return self._uploaded_file
+            
+    def _display_result(self, result):
+        self._output_text.pack_forget()
+        self._output_image_label.pack_forget()
+        
+        if isinstance(result, str) and result.endswith(('.png', '.jpg', '.jpeg')):
+            try:
+                img = Image.open(result)
+                img.thumbnail((600, 400))
+                photo = ImageTk.PhotoImage(img)
+                self._output_image_label.config(image=photo)
+                self._output_image_label.image = photo
+                self._output_image_label.pack()
+                self._output_text.pack(fill=tk.BOTH, expand=True)
+                self._output_text.delete(1.0, tk.END)
+                self._output_text.insert(tk.END, f"✅ Image generated!\nFile: {result}")
+            except Exception as e:
+                self._output_text.pack(fill=tk.BOTH, expand=True)
+                self._output_text.delete(1.0, tk.END)
+                self._output_text.insert(tk.END, f"❌ Image error: {str(e)}")
+        else:
+            self._output_text.pack(fill=tk.BOTH, expand=True)
+            self._output_text.delete(1.0, tk.END)
+            self._output_text.insert(tk.END, f"Result:\n{result}\n{'-'*40}\n")
+        self._output_text.see(tk.END)
+        
+    def _update_info_display(self):
+        model_name = self._model_var.get()
+        if model_name == "Text-to-Image":
+            info = """🔤 TEXT-TO-IMAGE MODEL
 
-    @log_action
-    def run_model_2(self):
-        messagebox.showinfo("Info", "Model 2 is not implemented in this version. Use Run Model 1.")
+Model: nota-ai/bk-sdm-small
+Category: Image Generation
+Description: Generates images from text prompts.
 
+Usage Example:
+Enter a prompt like "a red apple on a white table"
 
-# =============================================
-# Main Entry Point
-# =============================================
-if __name__ == "__main__":
-    app = AIAppGUI()
-    app.mainloop()
+OOP Concepts Used:
+• Encapsulation: Model logic hidden in TextToImageModel class
+• Polymorphism: Both models implement predict() with different behavior
+• Method Overriding: get_usage_example() overridden per model
+• Composition: GUI uses model objects via ModelSelector"""
+        else:  # Sentiment Analysis
+            info = """📊 SENTIMENT ANALYSIS MODEL
+
+Model: cardiffnlp/twitter-roberta-base-sentiment-latest
+Category: Text Classification
+Description: Classifies text as Positive, Neutral, or Negative.
+
+Usage Example:
+Enter text like "I love this course!"
+
+OOP Concepts Used:
+• Encapsulation: Model logic hidden in SentimentModel class
+• Polymorphism: Both models implement predict() with different behavior
+• Method Overriding: get_usage_example() overridden per model
+• Composition: GUI uses model objects via ModelSelector"""
+        self._info_text.delete(1.0, tk.END)
+        self._info_text.insert(tk.END, info)
+        
+    def _clear_all(self):
+        self._input_text.delete(1.0, tk.END)
+        self._output_text.delete(1.0, tk.END)
+        self._output_image_label.pack_forget()
+        self._output_text.pack(fill=tk.BOTH, expand=True)
+        self._uploaded_file = None
+        self._input_type.set("text")

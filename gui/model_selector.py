@@ -1,7 +1,7 @@
 from models.text_to_image_model import TextToImageModel
 from models.sentiment_model import SentimentModel
 
-class ModelSelector:  # ← MUST be exactly this name
+class ModelSelector:
     def __init__(self):
         self.models = {
             "Text-to-Image": TextToImageModel(),

@@ -1,32 +1,26 @@
 === OOP CONCEPTS EXPLANATION ===
 
-1. MULTIPLE INHERITANCE:
-   - Used in gui/app.py: class AIAppGUI(LoggingMixin, tk.Tk)
-   - LoggingMixin adds reusable logging without duplicating code in every method.
+1. ENCAPSULATION:
+   - Each model class (TextToImageModel, SentimentModel) hides internal state (pipeline, model object) and exposes only necessary methods.
 
-2. DECORATORS:
-   - @log_action decorator logs user actions (e.g., run_model_1) without modifying core logic.
-   - Applied to multiple methods to track user interaction.
+2. POLYMORPHISM:
+   - Both models implement the same interface (load_model, predict) but with different internal logic.
 
-3. ENCAPSULATION:
-   - Each AI model (TextToImageModel, SentimentModel) encapsulates its own loading and inference logic.
-   - Internal state (pipeline, model object) is hidden — accessed only via public methods.
+3. METHOD OVERRIDING:
+   - Each model overrides get_usage_example() to provide model-specific examples.
 
-4. POLYMORPHISM:
-   - Different models respond to different method calls (.generate() vs .analyze()) but are accessed through the same interface via ModelSelector.
-   - The GUI doesn’t need to know which model it’s calling — just tells it to “run”.
+4. COMPOSITION:
+   - The GUI uses ModelSelector to manage model instances instead of inheriting AI functionality.
 
-5. METHOD OVERRIDING:
-   - Not heavily used, but you could override Tkinter’s .destroy() method to add cleanup (e.g., delete temp images).
+5. MULTIPLE INHERITANCE & DECORATORS:
+   - Not heavily used in this simplified version, but could be added (e.g., LoggingMixin, @log_execution).
 
-=== SELECTED AI MODELS ===
+=== SELECTED MODELS ===
 
-1. Text-to-Image Model:
-   - Name: nota-ai/bk-sdm-small
+1. Text-to-Image: nota-ai/bk-sdm-small
    - Category: Image Generation
-   - Why chosen: Lightweight (~500MB), fast on CPU, no login required, generates decent quality images from text.
+   - Lightweight, CPU-friendly, generates images from text.
 
-2. Sentiment Analysis Model:
-   - Name: cardiffnlp/twitter-roberta-base-sentiment-latest
+2. Sentiment Analysis: cardiffnlp/twitter-roberta-base-sentiment-latest
    - Category: Text Classification
-   - Why chosen: Lightweight, state-of-the-art for Twitter-style text, requires only transformers library.
+   - Accurate for social media text, requires only transformers.
