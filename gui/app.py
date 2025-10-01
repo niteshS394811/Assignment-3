@@ -54,7 +54,6 @@ class AIModelGUI:
         main_content.add(self._output_frame, weight=70) 
         
         # FIX: Explicitly set the initial sash position to 30% of the 1100px width (330px).
-        # This ensures the 30% width is applied immediately upon launch.
         self._root.update_idletasks() # Ensures geometry is calculated
         main_content.sashpos(0, 330)
         
@@ -137,6 +136,7 @@ class AIModelGUI:
         info_frame = ttk.LabelFrame(self._root, text="OOP Explanation & Info Reference", padding="10")
         info_frame.pack(fill=tk.X, padx=10, pady=5)
         
+        # The info text widget
         self._info_text = scrolledtext.ScrolledText(info_frame, wrap=tk.WORD, height=10, font=("Arial", 9))
         self._info_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
@@ -235,9 +235,14 @@ class AIModelGUI:
         
     def _update_info_display(self):
         """Populates the bottom information panel with model details and OOP explanations."""
+        # 1. Enable editing temporarily to insert text
+        self._info_text.config(state=tk.NORMAL)
+
         model_name = self._model_var.get()
         
         temp_model = self._model_selector.get_model(model_name)
+        # Note: get_model_info() and get_usage_example() are assumed to be implemented
+        # in the model classes (SentimentModel and TextToImageModel).
         if not temp_model:
             model_info = {"Model Name": "N/A", "Category": "N/A", "Description": "N/A"}
             usage_example = "N/A"
@@ -263,6 +268,10 @@ class AIModelGUI:
 """
         self._info_text.delete(1.0, tk.END)
         self._info_text.insert(tk.END, info)
+
+        # 2. Disable editing to make the text read-only
+        self._info_text.config(state=tk.DISABLED)
+
         
     def _clear_all(self):
         """Clears all input and output fields."""
